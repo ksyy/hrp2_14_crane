@@ -1,0 +1,22 @@
+<package>
+  <description brief="HRP-2 14 crane controller">
+
+     HRP2-14 crane controller (LAAS robotics room).
+
+  </description>
+  <author>Olivier Stasse/olivier.stasse@laas.fr</author>
+  <license>BSD</license>
+  <review status="experimental" notes=""/>
+  <url>https://wiki.laas.fr/robots/HRP/ROS/hrp2_14_crane</url>
+
+  <export>
+    <rosdoc config="rosdoc.yaml" />
+  </export>
+
+  <depend package="std_msgs"/>
+  <depend package="rospy"/>
+  <depend package="roscpp"/>
+  <depend package="sensor_msgs"/>
+
+  <rosdep name="libftdi-dev" />
+</package>

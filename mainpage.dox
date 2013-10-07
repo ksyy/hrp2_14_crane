@@ -1,0 +1,12 @@
+/**
+\mainpage
+\htmlinclude manifest.html
+
+\b hrp2_14_crane provides a controller for the crane in room Gérard
+Bauzil at LAAS. It is custom made for this hardware.
+
+\section codeapi Code API
+
+This package provides no API.
+
+*/
