@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.4.6)
 SET(CMAKE_VERBOSE_MAKEFILE ON)
 include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
-
+#include(/opt/ros/electric/ros/core/rosbuild/rosbuild.cmake)
 set(ROS_BUILD_TYPE RelWithDebInfo)
 
 rosbuild_init()

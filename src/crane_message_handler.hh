@@ -20,9 +20,12 @@ protected:
   // Boolean choices on the axis to be controlled.
   int s_[3];
 
-  // Position values of the crane in meters
+  // Position values of the crane in millimeters
   // using encoders.
-  double encoder_values_[3];
+  //double encoder_values_[3];
+  double       sensor_position_[3];
+  double       sensor_velocity_[3];
+  unsigned int sensor_label_;  
 
   // Detect if new joystick is to be applied
   bool apply_;

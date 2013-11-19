@@ -6,15 +6,13 @@
 
 #include <sys/time.h>
 
-#define USB_VENDOR_FTDI 0x0403
-#define USB_PRODUCT_SERIAL 0x6001
+#include "crane_usb.hh"
 
-#define LEVEL_FOR_DISPLAYING_ENCODERS 1
 
 /* --- local data ---------------------------------------------------------- */
 
 static struct ftdi_context *ftdic;
-
+//static struct MsgStruct CrSensor;
 
 /* --- connect ------------------------------------------------------------- */
 
@@ -162,177 +160,150 @@ int ptp_recontrol(double v[3],
   bool ok=true;
   unsigned int count=0;
   int r=0;
-  do 
-    {
-      ok=true;
-      usleep(1000.0);
-      r=ptp_control(v,s);
-      if (r!=0)
-	{
-	  count ++;
-	  if (count<k)
-	    ok=false;
-	}
+  do {
+    ok=true;
+    usleep(1000.0);
+    r=ptp_control(v,s);
+    if (r!=0) {
+      count ++;
+      if (count<k)
+	ok=false;
     }
+  }
   while(!ok);
 
   return r;
 }
 
-/*
-        The purpose of this function is to convert a reflected binary
-        Gray code number to a binary number.
-*/
-int grayToBinary(unsigned int num)
-{
-    unsigned int numBits = 8 * sizeof(num);
-    unsigned int shift=0;
-    unsigned int mask=0;
-
-    bool Negative=false;
-    mask = 1;
-    mask = mask << 24;
-    if (mask&num)
-      Negative = true;
-    num = num & ~mask;
-
-    for (shift = 1; shift < 24; shift *= 2)
-      num ^= num >> shift;
-
-    if (Negative)
-	return -num;
-    return num;
-}
-
-#define SIZE_ENCODER_MSG 18
-#define SIZE_IOCTL_MSG 36
-int ptp_read_encoders(double encoders[3])
-{
-  unsigned int debug=1;
-
-  static unsigned char buffer[SIZE_IOCTL_MSG];
+int ptp_read_encoders(unsigned int *Label, double Position[3], double Velocity[3]) {
+  int FtdiReturn = 0;
+  unsigned int BufferIdx = 0, CntComplet = 0, i = 0;
+  static enum MsgStep MsgCrStep = DLE_HEADER, MsgNxStep = DLE_HEADER;
+  static struct MsgStruct NxSensor;
+  static unsigned char SensorIdx = 0;
+  unsigned char Buffer[SIZE_IOCTL_MSG];
+  unsigned char Debug = 1;
+  static bool DleDouble = false;
+  bool MsgComplet = false;
+    
+  /* Read & test USB link */
+  if (!ftdic)
+    return -1;
   
-  int e;
-
-  if (!ftdic) return -1;
-  e = ftdi_read_data(ftdic, buffer, SIZE_IOCTL_MSG);
-
-  if (e < 0) {
+  FtdiReturn = ftdi_read_data(ftdic, Buffer, SIZE_IOCTL_MSG);
+  if (FtdiReturn < 0) {
     warnx("ftdi_read_data: %s", ftdi_get_error_string(ftdic));
     return 1;
   }
 
- 
-  if ((e==0) || (e<SIZE_ENCODER_MSG))
+  if ((FtdiReturn == 0) || (FtdiReturn < SIZE_ENCODER_MSG))
     return 0;
-
-  // Find head of packet.
-  unsigned head_packet=0;
-  while( ((buffer[head_packet]!=0x10) ||
-	 (buffer[head_packet+1]!=0xaa) ) &&
-	 head_packet<SIZE_IOCTL_MSG-1)
-    head_packet++;
-
-
-  // Print header.
-  if (debug>LEVEL_FOR_DISPLAYING_ENCODERS)
-    {
-      for(unsigned int i=head_packet;
-	  i<head_packet+2;i++)
-	printf ("0x%x ", buffer[i]);
-      printf("||");
-
-      // Print label 
-      for(unsigned int i=head_packet+2;
-	  i<head_packet+4;i++)
-	printf ("0x%x ", buffer[i]);
-      printf("||");
-    }
-
-  typedef union 
-  {
-    int x;
-    unsigned char c[4];
-  }position_type;
-
-  position_type X[3];
   
-  int Positions[3];
-  unsigned int shift=0;
-  unsigned int idX=0;
-
-  double scale[3] = {0.0, 5.8/586944.0, -11.0/1021677.0};
-
-  for (unsigned int i=head_packet+4,j=0;
-       i<head_packet+SIZE_ENCODER_MSG-2+shift;i++)
-    {
-
-      if (debug>LEVEL_FOR_DISPLAYING_ENCODERS)
-	printf ("0x%x ", buffer[i]);
-
-      X[idX].c[j] = buffer[i];
-      j++;
-      if (j==4)
-	{ 
-	  Positions[idX] = grayToBinary(X[idX].x);
-	  encoders[idX] = (double)(Positions[idX]) *scale[idX];
-	  if (debug>LEVEL_FOR_DISPLAYING_ENCODERS)
-	    printf(" %d ",Positions[idX]);
-	  idX++;j=0;
-	}
-      if (buffer[i]==0x10)
-	{ i++;shift++;}
+  while (BufferIdx < (unsigned int)FtdiReturn) {
+    /* Extract message */
+    switch(MsgCrStep) {
+    case DLE_HEADER :
+      for (i = 0; i < SENSOR_NB; i++)
+	NxSensor.Sensor_Msg[i] = 0;
+      DleDouble = false;
+      MsgNxStep = (Buffer[BufferIdx] == DLE) ? (ADDRESS_ID) : (DLE_HEADER);
+      break;
+    case ADDRESS_ID :
+      MsgNxStep = (Buffer[BufferIdx] == ADDR_TX) ? (LABEL_MSB) : (DLE_HEADER);
+      break;
+    case LABEL_MSB :
+      if((!DleDouble && Buffer[BufferIdx] != DLE) || (DleDouble && Buffer[BufferIdx] == DLE)) {
+    	NxSensor.Sensor_Label   = (unsigned int)Buffer[BufferIdx];
+	NxSensor.Sensor_Label <<= 8;
+    	DleDouble = false;
+    	MsgNxStep = LABEL_LSB;
+      }
+      else if (Buffer[BufferIdx] == DLE) 
+	DleDouble = true;
+      else
+	MsgNxStep = DLE_HEADER;      
+      break;
+    case LABEL_LSB :
+      if((!DleDouble && Buffer[BufferIdx] != DLE) || (DleDouble && Buffer[BufferIdx] == DLE)) {
+    	NxSensor.Sensor_Label |= (unsigned int)Buffer[BufferIdx];
+    	DleDouble = false;
+    	SensorIdx = 0;
+    	MsgNxStep = SENSOR_BYTE_0;
+      }
+      else if (Buffer[BufferIdx] == DLE) 
+	DleDouble = true;
+      else
+	MsgNxStep = DLE_HEADER;      
+      break;
+    case SENSOR_BYTE_0 :
+    case SENSOR_BYTE_1 :
+    case SENSOR_BYTE_2 :
+    case SENSOR_BYTE_3 :
+      if((!DleDouble && Buffer[BufferIdx] != DLE) || (DleDouble && Buffer[BufferIdx] == DLE)) {
+	NxSensor.Sensor_Msg[SensorIdx]  |= (unsigned int)Buffer[BufferIdx];
+	NxSensor.Sensor_Msg[SensorIdx] <<= ((MsgCrStep == SENSOR_BYTE_3) ? (0) : (8));
+       	DleDouble = false;
+	SensorIdx = (MsgCrStep == SENSOR_BYTE_3) ? (SensorIdx + 1) : (SensorIdx);
+	MsgNxStep = (MsgCrStep == SENSOR_BYTE_3 && SensorIdx < SENSOR_NB) ? (SENSOR_BYTE_0) : (DLE_FOOTER);
+	MsgNxStep = (MsgCrStep == SENSOR_BYTE_2) ? (SENSOR_BYTE_3) : (MsgNxStep);
+	MsgNxStep = (MsgCrStep == SENSOR_BYTE_1) ? (SENSOR_BYTE_2) : (MsgNxStep);
+	MsgNxStep = (MsgCrStep == SENSOR_BYTE_0) ? (SENSOR_BYTE_1) : (MsgNxStep);
+      }
+      else if (Buffer[BufferIdx] == DLE) 
+	DleDouble = true;
+      else
+	MsgNxStep = DLE_HEADER;      
+      break;
+    case DLE_FOOTER :
+      MsgNxStep = (Buffer[BufferIdx] == DLE) ? (ETX_FOOTER) : (DLE_HEADER);
+      break;
+    case ETX_FOOTER :
+      MsgComplet = (Buffer[BufferIdx] == ETX) ? (true) : (false);
+      MsgNxStep = DLE_HEADER;
     }
-
-  static unsigned int tail[2];
-  for (unsigned int i=head_packet+SIZE_ENCODER_MSG-2+shift,j=0;
-	   i<head_packet+SIZE_ENCODER_MSG+shift;
-       i++,j++)
-    tail[j] = buffer[i];
-
-  if (debug > LEVEL_FOR_DISPLAYING_ENCODERS)
-    {
-      printf(" %d 0x%x 0x%x 0x%x 0x%x||",sizeof(X[2].x),
-	     X[2].c[0], X[2].c[1], X[2].c[2], X[2].c[3]);
-      
-      // Print tail
-      for (unsigned int i=head_packet+SIZE_ENCODER_MSG-2+shift;
-	   i<head_packet+SIZE_ENCODER_MSG+shift;
-	   i++)
-	printf ("0x%x ", buffer[i]);
-      
+    BufferIdx++;
+    MsgCrStep = MsgNxStep;
+    if (MsgComplet) {
+      CntComplet++;
+      for (i = 0; i < SENSOR_NB; i++) {
+	NxSensor.Sensor_Position[i] = (NxSensor.Sensor_Msg[i] & POSITION_MASK) >> POSITION_SHIFT;
+	NxSensor.Sensor_Velocity[i] = (NxSensor.Sensor_Msg[i] & VELOCITY_MASK) >> VELOCITY_SHIFT;
+	NxSensor.Sensor_NoPos[i]    = (NxSensor.Sensor_Msg[i] & NO_POS_MASK)   >> NO_POS_SHIFT;
+	NxSensor.Sensor_Warn[i]     = (NxSensor.Sensor_Msg[i] & WARNING_MASK)  >> WARN_SHIFT;
+	NxSensor.Sensor_Error[i]    = (NxSensor.Sensor_Msg[i] & ERROR_MASK)    >> ERROR_SHIFT;
+      }
+      MsgComplet = false;
     }
-
-  if ((tail[0]!=0x10) ||
-      (tail[1]!=0x3))
-    return -1;
-    
-  if (debug>LEVEL_FOR_DISPLAYING_ENCODERS)
-    printf("\n");
-
+  }
+  // END LOOP
+  *Label = (CntComplet) ? (NxSensor.Sensor_Label) : (0.0);
+  for (i = 0; i < SENSOR_NB; i++) {
+    Position[i] = (CntComplet) ? ((double)NxSensor.Sensor_Position[i]) : (0.0);
+    Velocity[i] = (CntComplet) ? ((double)NxSensor.Sensor_Velocity[i]) : (0.0);
+  }
+  // Print header.
+  if (Debug > LEVEL_FOR_DISPLAYING_ENCODERS && CntComplet)
+    printf("%5d, %5d, %5d, %5d\n", NxSensor.Sensor_Label, NxSensor.Sensor_Position[0], 
+	   NxSensor.Sensor_Position[1], NxSensor.Sensor_Position[2]);
+  CntComplet = 0;
   return 0;
 }
 
-int ptp_reread_encoders(double encoder_values[3],
-			 unsigned int k)
-{
+int ptp_reread_encoders(unsigned int *Label, double Position[3], double Velocity[3], unsigned int k) {
   bool ok=true;
   unsigned int count=0;
   int r=0;
-  do 
-    {
-      ok=true;
-      usleep(1000.0);
-      r=ptp_read_encoders(encoder_values);
-      if (r!=0)
-	{
-	  count ++;
-	  if (count<k)
-	    ok=false;
-	}
+  do {
+    ok=true;
+    usleep(1000.0);
+    r=ptp_read_encoders(Label, Position, Velocity);
+    if (r!=0) {
+      count ++;
+      if (count<k)
+	ok=false;
     }
+  }
   while(!ok);
-
   return r;
 }
 
@@ -347,3 +318,6 @@ int ptp_reread_encoders(double encoder_values[3],
   586944
   589005
  */
+
+
+
