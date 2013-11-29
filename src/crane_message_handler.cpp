@@ -23,18 +23,18 @@ CraneMessageHandler::CraneMessageHandler():
   ptp_connect();
   std::cout << "Connection finished" << std::endl;
 
-  for(unsigned int i=0;i<2;i++)
+  for(unsigned int i=0;i<3;i++)
     {
       previous_error_[i] = 0.0;
       integral_[i] = 0.0;
     }
 
-  desired_position_[0] = 4.3;
-  desired_position_[1] = 4.3;  
+  setHomeAsDesiredPosition();
 
-  Kp_[0] = 0.5; Kp_[1] = 0.5;
-  Kd_[0] = 0.0; Kd_[1] = 0.0;
-  Ki_[0] = 0.0; Ki_[1] = 0.0;
+
+  Kp_[0] = 0.5; Kp_[1] = 0.5; Kp_[2] = 0.5;
+  Kd_[0] = 0.0; Kd_[1] = 0.0; Kd_[2] = 0.5;
+  Ki_[0] = 0.0; Ki_[1] = 0.0; Ki_[2] = 0.0;
 
   count_=0;
 
@@ -42,9 +42,51 @@ CraneMessageHandler::CraneMessageHandler():
   gettimeofday(&lastcontrol_,0);
 }
 
+void CraneMessageHandler::setHomeAsDesiredPosition()
+{
+  desired_position_[0] = 0.935;
+  desired_position_[1] = desired_position_[0]+0.09;  
+  desired_position_[2] = 0.379;  
+}
+
+#if 0
+  desired_position_[0] = 7.154;
+  desired_position_[1] = desired_position_[0]+0.09;  
+  desired_position_[2] = 3.432; 
+#endif
+
 CraneMessageHandler::~CraneMessageHandler()
 {
   ptp_disconnect();
+}
+
+void CraneMessageHandler::checkVelocities(double * v, int *s)
+{
+  if (sensor_position_[0]>2.44)
+    {
+      if (sensor_position_[2]<2.00)
+	{
+	  // If the speed is negative slow down
+	  if (v[1]<0.0)
+	  {
+	    v[1]=0.05*(sensor_position_[2] - 1.0);
+	    s[1] = 1;
+	  }
+	}
+    }
+  if (sensor_position_[0]<2.44)
+    {
+      if (sensor_position_[2]<1.00)
+	{
+	  // If the speed is negative
+	  if (v[1]<0.0)
+	  {
+	    v[1]=0.05*(sensor_position_[2] - 1.0);
+	    s[1] = 1;
+	  }
+	}
+
+    }
 }
 
 void CraneMessageHandler::chatterCallback(const sensor_msgs::Joy::ConstPtr& joy)
@@ -53,6 +95,13 @@ void CraneMessageHandler::chatterCallback(const sensor_msgs::Joy::ConstPtr& joy)
   v_[1] = a_scale_ * joy->axes[1];
   v_[2] = a_scale_ * joy->axes[2];
   apply_= true;
+}
+
+void CraneMessageHandler::updatePositionCallback(const geometry_msgs::TransformStamped &tf)
+{
+  desired_position_[0] = tf.transform.translation.x+7.03;
+  desired_position_[1] = desired_position_[0]+0.09;
+  desired_position_[2] = tf.transform.translation.y+3.64;
 }
 
 void CraneMessageHandler::joystickStrategy()
@@ -69,16 +118,16 @@ void CraneMessageHandler::joystickStrategy()
 
 }
 
-#define DIM_TO_CONTROL 2
+#define DIM_TO_CONTROL 3
 void CraneMessageHandler::positionControlStrategy()
 {
   double error[DIM_TO_CONTROL];
   double dt=0.1;
-  double derivate[2], integral[2];
+  double derivate[DIM_TO_CONTROL], integral[DIM_TO_CONTROL];
 
   for(unsigned int i=0;i<DIM_TO_CONTROL;i++)
     {
-      error[i] = desired_position_[i] - sensor_position_[i+1];
+      error[i] = desired_position_[i] - sensor_position_[i];
       derivate[i] = (error[i] - previous_error_[i])/ dt;
       integral[i] = integral[i] + error[i]*dt;
 
@@ -100,16 +149,18 @@ void CraneMessageHandler::positionControlStrategy()
 					     controltime);
 
   if ((intervalcontrol>0.07) && (intervalreadingandnow>0.02)) {
-      /*
-      std::cout << "interval control: " 
-		<< intervalcontrol 
-		<< "interval reading and now: " 
-		<< intervalreadingandnow
-		<< std::endl;*/
-      lastcontrol_ = controltime;
-      if (ptp_control(v_,s_))
-	ptp_reconnect_until_ok_or_k_demands(3);  
-    }
+    lastcontrol_ = controltime;
+
+    double map_v[3];
+    map_v[0] = v_[0];
+    map_v[1] = v_[2];
+    map_v[2] = 0.0;
+
+    checkVelocities(map_v,s_);
+
+    if (ptp_control(map_v,s_))
+      ptp_reconnect_until_ok_or_k_demands(3);  
+  }
 
 }
 
@@ -126,6 +177,9 @@ void CraneMessageHandler::applyControlStrategy()
   
   if ((intervalreading > 0.07) && (intervalcontrolandnow > 0.02)) {
     r=ptp_read_encoders(&sensor_label_, sensor_position_, sensor_velocity_);
+    for(unsigned int i=0;i<3;i++)
+      sensor_position_[i] = sensor_position_[i]/1000.0;
+
     lastreading_ = reading;
   }
   
@@ -153,8 +207,10 @@ void CraneMessageHandler::applyControlStrategy()
   
   if (intervalreading > 0.07)
     if (valid_encoders && flag_compare)
-      printf("%lf, %d, Positions : %4.0lf, %4.0lf, %4.0lf Speed : %4.0lf, %4.0lf, %4.0lf  \n",intervalreading, 
-	     (unsigned int)sensor_label_, sensor_position_[0], sensor_position_[1], sensor_position_[2], 
+      printf("%lf, %d, Positions : (%4.2lf, %4.2lf) (%4.2lf, %4.2lf) (%4.2lf,%4.2lf) Speed : %4.2lf, %4.2lf, %4.2lf \n",intervalreading, 
+	     (unsigned int)sensor_label_, 
+	     sensor_position_[0], sensor_position_[1], sensor_position_[2], 
+	     desired_position_[0],desired_position_[1],desired_position_[2],
 	     sensor_velocity_[0], sensor_velocity_[1],sensor_velocity_[2]);
   for (i = 0; i < SENSOR_NB; i++) 
     sensor_compare_[i] = sensor_position_[i];

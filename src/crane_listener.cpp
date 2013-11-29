@@ -50,6 +50,7 @@ int main(int argc, char **argv)
 				    &CraneMessageHandler::chatterCallback,
 				    &craneMsgHandler); 
 
+  sub = n.subscribe("/evart/facom_box/PO",1000,&CraneMessageHandler::updatePositionCallback,&craneMsgHandler);
   // %EndTag(SUBSCRIBER)%
 
   ros::Rate loop_rate(1000);
