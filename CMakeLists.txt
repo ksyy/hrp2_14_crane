@@ -18,3 +18,4 @@ rosbuild_add_executable(crane_listener src/crane_listener.cpp
   src/crane_usb.cpp
   src/crane_message_handler.cpp)
 target_link_libraries(crane_listener ftdi)
+#target_link_libraries(crane_listener efence)

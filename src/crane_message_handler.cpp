@@ -14,6 +14,7 @@ CraneMessageHandler::CraneMessageHandler():
   //strategy_(JOYSTICK)
   strategy_(POSITION)
 {
+  mocap_status_= 0;
   v_[0] = v_[1] = v_[2] = 0.0;
   s_[0] = s_[1] = s_[2] = 1;
   for(unsigned int i=0;i<3;i++)
@@ -32,8 +33,8 @@ CraneMessageHandler::CraneMessageHandler():
   setHomeAsDesiredPosition();
 
 
-  Kp_[0] = 0.5; Kp_[1] = 0.5; Kp_[2] = 0.5;
-  Kd_[0] = 0.0; Kd_[1] = 0.0; Kd_[2] = 0.5;
+  Kp_[0] = 0.75; Kp_[1] = 0.75; Kp_[2] = 0.5;
+  Kd_[0] = 1.0; Kd_[1] = 1.0; Kd_[2] = 0.0;
   Ki_[0] = 0.0; Ki_[1] = 0.0; Ki_[2] = 0.0;
 
   count_=0;
@@ -60,10 +61,13 @@ CraneMessageHandler::~CraneMessageHandler()
   ptp_disconnect();
 }
 
+
 void CraneMessageHandler::checkVelocities(double * v, int *s)
 {
+  // Check after the closet along the X Axis.
   if (sensor_position_[0]>2.44)
     {
+      // If the crane is to close to the cameras
       if (sensor_position_[2]<2.00)
 	{
 	  // If the speed is negative slow down
@@ -73,7 +77,36 @@ void CraneMessageHandler::checkVelocities(double * v, int *s)
 	    s[1] = 1;
 	  }
 	}
+      // Check if we are not close to the boundary.
+      if (sensor_position_[0]>10.0)
+	{
+	  if (v[0]>0.0)
+	  {
+	    v[0]=-0.05*(sensor_position_[1] - 10.0);
+	    s[0] = 1;
+	  }
+	}
+
+      // Check max. velocities along X clamped it to one.
+      if (v[0]*v[0]> 1.0)
+	{
+	  if (v[0]<0.0)
+	    v[0] = -1.0;
+	  else
+	    v[0] = 1.0;
+	}
+
+      // Check max. velocities along Y clamped it to one.
+      if (v[1]*v[1]> 1.0)
+	{
+	  if (v[1]<0.0)
+	    v[1] = -1.0;
+	  else
+	    v[1] = 1.0;
+	}
+
     }
+
   if (sensor_position_[0]<2.44)
     {
       if (sensor_position_[2]<1.00)
@@ -86,6 +119,13 @@ void CraneMessageHandler::checkVelocities(double * v, int *s)
 	  }
 	}
 
+    }
+
+  if (mocap_status_==0)
+    {
+      std::cout << "Protect the crane" << std::endl;
+      v[0]=0.0;
+      v[1]=0.0;
     }
 }
 
@@ -102,6 +142,12 @@ void CraneMessageHandler::updatePositionCallback(const geometry_msgs::TransformS
   desired_position_[0] = tf.transform.translation.x+7.03;
   desired_position_[1] = desired_position_[0]+0.09;
   desired_position_[2] = tf.transform.translation.y+3.64;
+  /*
+  std::cout << "updatePositionCallback: " 
+	    << desired_position_[0] << " "   
+	    << desired_position_[1] << " "   
+	    << desired_position_[2] << std::endl;
+  */
 }
 
 void CraneMessageHandler::joystickStrategy()
@@ -204,13 +250,21 @@ void CraneMessageHandler::applyControlStrategy()
   flag_compare |= (sensor_compare_[0] -= sensor_position_[0]) ? (true) : (false);
   flag_compare |= (sensor_compare_[1] -= sensor_position_[1]) ? (true) : (false);
   flag_compare |= (sensor_compare_[2] -= sensor_position_[2]) ? (true) : (false);
+
+  printf("%lf, %d, Positions : (%4.2lf, %4.2lf) (%4.2lf, %4.2lf) (%4.2lf,%4.2lf) Speed : %4.2lf, %4.2lf, %4.2lf \n",intervalreading, 
+	 (unsigned int)sensor_label_, 
+	 sensor_position_[0], desired_position_[0],
+	 sensor_position_[1], desired_position_[1],
+	 sensor_position_[2], desired_position_[2],
+	 sensor_velocity_[0], sensor_velocity_[1],sensor_velocity_[2]);
   
   if (intervalreading > 0.07)
     if (valid_encoders && flag_compare)
       printf("%lf, %d, Positions : (%4.2lf, %4.2lf) (%4.2lf, %4.2lf) (%4.2lf,%4.2lf) Speed : %4.2lf, %4.2lf, %4.2lf \n",intervalreading, 
 	     (unsigned int)sensor_label_, 
-	     sensor_position_[0], sensor_position_[1], sensor_position_[2], 
-	     desired_position_[0],desired_position_[1],desired_position_[2],
+	     sensor_position_[0], desired_position_[0],
+	     sensor_position_[1], desired_position_[1],
+	     sensor_position_[2], desired_position_[2],
 	     sensor_velocity_[0], sensor_velocity_[1],sensor_velocity_[2]);
   for (i = 0; i < SENSOR_NB; i++) 
     sensor_compare_[i] = sensor_position_[i];
@@ -222,4 +276,9 @@ void CraneMessageHandler::applyControlStrategy()
 void CraneMessageHandler::setStrategy(CraneStrategy aStrategy)
 {
   strategy_ = aStrategy;
+}
+
+void CraneMessageHandler::setMocapStatus(unsigned int mocap_status)
+{
+  mocap_status_ = mocap_status;
 }

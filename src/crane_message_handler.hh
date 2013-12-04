@@ -57,6 +57,7 @@ protected:
   void setHomeAsDesiredPosition();
   
   unsigned int count_;
+  unsigned int mocap_status_;
 
   struct timeval lastcontrol_;
   struct timeval lastreading_;
@@ -74,6 +75,8 @@ public:
   void checkVelocities(double *v, int *s);
 
   void setStrategy(CraneStrategy aStrategy);
+
+  void setMocapStatus(unsigned int mocap_status);
 
 };
 #endif /* _CRANE_MESSAGE_HANDLER_HH_ */
