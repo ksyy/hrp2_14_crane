@@ -142,6 +142,12 @@ void CraneMessageHandler::updatePositionCallback(const geometry_msgs::TransformS
   desired_position_[0] = tf.transform.translation.x+7.03;
   desired_position_[1] = desired_position_[0]+0.09;
   desired_position_[2] = tf.transform.translation.y+3.64;
+
+  desired_position_[0] = 0.935;
+  desired_position_[1] = desired_position_[0]+0.09;  
+  desired_position_[2] = 0.379;  
+
+
   /*
   std::cout << "updatePositionCallback: " 
 	    << desired_position_[0] << " "   
@@ -281,4 +287,12 @@ void CraneMessageHandler::setStrategy(CraneStrategy aStrategy)
 void CraneMessageHandler::setMocapStatus(unsigned int mocap_status)
 {
   mocap_status_ = mocap_status;
+}
+
+void CraneMessageHandler::stopEverything()
+{
+  double lv[3]={0.0,0.0,0.0};
+  int ls[3]={1,1,1};
+
+  ptp_control(lv,ls);
 }

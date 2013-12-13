@@ -78,5 +78,7 @@ public:
 
   void setMocapStatus(unsigned int mocap_status);
 
+  void stopEverything();
+
 };
 #endif /* _CRANE_MESSAGE_HANDLER_HH_ */

@@ -1,13 +1,33 @@
 // %Tag(FULLTEXT)%
+
+
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "evart_bridge/TrackSegment.h"
 #include "crane_message_handler.hh"
+#include "signal_handler.hh"
 
 // %EndTag(CALLBACK)%
 
+struct evart_set_of_points{
+  std::string body_name_;
+  std::string body_ros_name_;
+  std::string segment_name_;
+
+  evart_set_of_points(const std::string &bn,
+		      const std::string &brn,
+		      const std::string &sn) : 
+    body_name_(bn), 
+    body_ros_name_(brn), 
+    segment_name_(sn) 
+  {}
+
+} ;
+
+
 void init_ros(ros::NodeHandle &n,
-	      CraneMessageHandler &craneMsgHandler)
+	      CraneMessageHandler &craneMsgHandler,
+	      evart_set_of_points set_to_follow)
 {
 
   /**
@@ -32,12 +52,12 @@ void init_ros(ros::NodeHandle &n,
 
   evart_bridge::TrackSegment trackASegment; 
   
-  trackASegment.request.body_name="hrp2_head_sf";
-  trackASegment.request.segment_name="PO";
+  trackASegment.request.body_name=set_to_follow.body_name_;
+  trackASegment.request.segment_name=set_to_follow.segment_name_;
 
   unsigned int res_to_call;
 
-  if (res_to_call=client.call(trackASegment))
+  if ((res_to_call=client.call(trackASegment)))
     {
       std::cout << "Succeeded in subscribing to track_segment:" 
 		<< trackASegment.request.body_name << "/" 
@@ -58,8 +78,15 @@ void init_ros(ros::NodeHandle &n,
 
 int main(int argc, char **argv)
 {
-
+  int iret=0;
   CraneMessageHandler craneMsgHandler;
+
+  evart_set_of_points 
+    set_to_follow(std::string("facom-box"),
+		  std::string("facom_box"),
+		  std::string("PO"));
+  //set_to_follow("hrp2_head_sf","PO");
+
   /**
    * The ros::init() function needs to see argc and argv so that it can perform
    * any ROS arguments and name remapping that were provided at the command line. For programmatic
@@ -79,43 +106,56 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
 
 
-  init_ros(n,craneMsgHandler);
+  init_ros(n,craneMsgHandler,set_to_follow);
 
   ros::Subscriber sub = n.subscribe("joy", 1, 
 				    &CraneMessageHandler::chatterCallback,
 				    &craneMsgHandler); 
 
-  //sub = n.subscribe("/evart/facom_box/PO",1000,&CraneMessageHandler::updatePositionCallback,&craneMsgHandler);
-  sub = n.subscribe("/evart/hrp2_head_sf/PO",1000,&CraneMessageHandler::updatePositionCallback,&craneMsgHandler);
+  std::string evart_topic("/evart/"+ set_to_follow.body_ros_name_ + "/" + set_to_follow.segment_name_);
+  sub = n.subscribe(evart_topic.c_str(),
+		    1000,&CraneMessageHandler::updatePositionCallback,&craneMsgHandler);
   // %EndTag(SUBSCRIBER)%
 
   ros::Rate loop_rate(50);
 
   int count = 0;
 
-  while (ros::ok())
-  {
-      
-      /**
-       * ros::spin() will enter a loop, pumping callbacks.  With this version, all
-       * callbacks will be called from within this thread (the main one).  ros::spin()
-       * will exit when Ctrl-C is pressed, or the node is shutdown by the master.
-       */
-      // %Tag(SPIN)%
-      // %EndTag(SPIN)%
   
-      ros::spinOnce();
-      // %EndTag(SPINONCE)%
+  try
+    {
+   
+      while (ros::ok())
+	{
+	  
+	  /**
+	   * ros::spin() will enter a loop, pumping callbacks.  With this version, all
+	   * callbacks will be called from within this thread (the main one).  ros::spin()
+	   * will exit when Ctrl-C is pressed, or the node is shutdown by the master.
+	   */
+	  // %Tag(SPIN)%
+	  // %EndTag(SPIN)%
+  
+	  ros::spinOnce();
+	  // %EndTag(SPINONCE)%
 
-      // Control the crane
-      craneMsgHandler.applyControlStrategy();
+	  // Control the crane
+	  craneMsgHandler.applyControlStrategy();
 
-      // %Tag(RATE_SLEEP)%
-      loop_rate.sleep();
-      // %EndTag(RATE_SLEEP)%
-      ++count;
+	  // %Tag(RATE_SLEEP)%
+	  loop_rate.sleep();
+	  // %EndTag(RATE_SLEEP)%
+	  ++count;
+	}
+
     }
 
-  return 0;
+  catch(SignalException &e)
+    {
+      craneMsgHandler.stopEverything();
+      std::cerr << "SignalException: " << e.what() << std::endl;
+      iret = EXIT_FAILURE;
+    }
+  return iret;
 }
 // %EndTag(FULLTEXT)%
