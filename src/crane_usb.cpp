@@ -286,7 +286,7 @@ int ptp_read_encoders(unsigned int *Label, double Position[3], double Velocity[3
     printf("%5d, %5d, %5d, %5d\n", NxSensor.Sensor_Label, NxSensor.Sensor_Position[0], 
 	   NxSensor.Sensor_Position[1], NxSensor.Sensor_Position[2]);
   CntComplet = 0;
-  return 0;
+  return 2;
 }
 
 int ptp_reread_encoders(unsigned int *Label, double Position[3], double Velocity[3], unsigned int k) {
