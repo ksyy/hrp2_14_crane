@@ -33,7 +33,7 @@ CraneMessageHandler::CraneMessageHandler():
   setHomeAsDesiredPosition();
 
 
-  Kp_[0] = 0.75; Kp_[1] = 0.75; Kp_[2] = 0.5;
+  Kp_[0] = 1.5; Kp_[1] = 1.5; Kp_[2] = 1.5;
   Kd_[0] = 1.0; Kd_[1] = 1.0; Kd_[2] = 0.0;
   Ki_[0] = 0.0; Ki_[1] = 0.0; Ki_[2] = 0.0;
 
@@ -142,12 +142,12 @@ void CraneMessageHandler::updatePositionCallback(const geometry_msgs::TransformS
   desired_position_[0] = tf.transform.translation.x+7.03;
   desired_position_[1] = desired_position_[0]+0.09;
   desired_position_[2] = tf.transform.translation.y+3.64;
-
+  /*
   desired_position_[0] = 0.935;
   desired_position_[1] = desired_position_[0]+0.09;  
   desired_position_[2] = 0.379;  
 
-
+  */
   /*
   std::cout << "updatePositionCallback: " 
 	    << desired_position_[0] << " "   
@@ -229,8 +229,9 @@ void CraneMessageHandler::applyControlStrategy()
   
   if ((intervalreading > 0.07) && (intervalcontrolandnow > 0.02)) {
     r=ptp_read_encoders(&sensor_label_, sensor_position_, sensor_velocity_);
-    for(unsigned int i=0;i<3;i++)
-      sensor_position_[i] = sensor_position_[i]/1000.0;
+    if(r >=2)
+      for(unsigned int i=0;i<3;i++)
+	sensor_position_[i] = sensor_position_[i]/1000.0;
 
     lastreading_ = reading;
   }
