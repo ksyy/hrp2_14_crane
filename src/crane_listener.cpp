@@ -82,10 +82,12 @@ int main(int argc, char **argv)
   CraneMessageHandler craneMsgHandler;
 
   evart_set_of_points 
-    set_to_follow(std::string("facom-box"),
+    /* set_to_follow(std::string("facom-box"),
 		  std::string("facom_box"),
+		  std::string("PO")); */
+    set_to_follow(std::string("hrp2_head_sf"),
+		  std::string("hrp2_head_sf"),
 		  std::string("PO"));
-  //set_to_follow("hrp2_head_sf","PO");
 
   /**
    * The ros::init() function needs to see argc and argv so that it can perform
