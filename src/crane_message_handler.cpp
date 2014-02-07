@@ -33,7 +33,7 @@ CraneMessageHandler::CraneMessageHandler():
   setHomeAsDesiredPosition();
 
 
-  Kp_[0] = 1.5; Kp_[1] = 1.5; Kp_[2] = 1.5;
+  Kp_[0] = 1.0; Kp_[1] = 1.5; Kp_[2] = 1.5;
   Kd_[0] = 1.0; Kd_[1] = 1.0; Kd_[2] = 0.0;
   Ki_[0] = 0.0; Ki_[1] = 0.0; Ki_[2] = 0.0;
 
