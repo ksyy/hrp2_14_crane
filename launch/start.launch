@@ -1,0 +1,4 @@
+<!-- -*- xml -*- -->
+<launch>
+  <node pkg="hrp2_14_crane" type="crane_listener" name="crane_listener"/>
+</launch>
