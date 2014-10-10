@@ -1,5 +1,6 @@
 <!-- -*- xml -*- -->
 <launch>
   <node pkg="hrp2_14_crane" type="crane_listener" name="crane_listener"/>
+  <node pkg="evart_bridge" type="evart" name="evart"/>
 </launch>
 
