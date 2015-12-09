@@ -86,8 +86,11 @@ int main(int argc, char **argv)
 		  std::string("facom_box"),
 		  std::string("PO"));*/
   set_to_follow(std::string("hrp2_head_sf"),
-		  std::string("hrp2_head_sf"),
-		  std::string("PO"));
+		std::string("hrp2_head_sf"),
+		std::string("hrp2_head_sf"));
+  /*set_to_follow(std::string("helmet"),
+		std::string("helmet"),
+		std::string("helmet"));*/
 
   /**
    * The ros::init() function needs to see argc and argv so that it can perform

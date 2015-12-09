@@ -33,7 +33,7 @@ CraneMessageHandler::CraneMessageHandler():
   setHomeAsDesiredPosition();
 
 
-  Kp_[0] = 1.0; Kp_[1] = 1.5; Kp_[2] = 1.5;
+  Kp_[0] = 0.75; Kp_[1] = 1.5; Kp_[2] = 1.5;
   Kd_[0] = 1.0; Kd_[1] = 1.0; Kd_[2] = 0.0;
   Ki_[0] = 0.0; Ki_[1] = 0.0; Ki_[2] = 0.0;
 
@@ -139,9 +139,9 @@ void CraneMessageHandler::chatterCallback(const sensor_msgs::Joy::ConstPtr& joy)
 
 void CraneMessageHandler::updatePositionCallback(const geometry_msgs::TransformStamped &tf)
 {
-  desired_position_[0] = tf.transform.translation.x+7.03;
-  desired_position_[1] = desired_position_[0]+0.09;
-  desired_position_[2] = tf.transform.translation.y+3.64;
+  desired_position_[0] = tf.transform.translation.x+6.91;
+  desired_position_[1] = desired_position_[0]+0.03;
+  desired_position_[2] = tf.transform.translation.y+3.59;
   /*
   desired_position_[0] = 0.935;
   desired_position_[1] = desired_position_[0]+0.09;  
