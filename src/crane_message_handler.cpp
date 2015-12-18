@@ -33,9 +33,16 @@ CraneMessageHandler::CraneMessageHandler():
   setHomeAsDesiredPosition();
 
 
-  Kp_[0] = 0.75; Kp_[1] = 1.5; Kp_[2] = 1.5;
-  Kd_[0] = 1.0; Kd_[1] = 1.0; Kd_[2] = 0.0;
-  Ki_[0] = 0.0; Ki_[1] = 0.0; Ki_[2] = 0.0;
+  //Kp_[0] = 0.75; Kp_[1] = 1.5; Kp_[2] = 1.5;
+  //Kd_[0] = 1.0; Kd_[1] = 1.0; Kd_[2] = 0.0;
+  //Ki_[0] = 0.0; Ki_[1] = 0.0; Ki_[2] = 0.0;
+
+  Kp_[0] = 0.25; Kp_[1] = 1.5; Kp_[2] = 1.5;
+  Kd_[0] = 0.0; Kd_[1] = 0.0; Kd_[2] = 0.0;
+  Ki_[0] = 0.3; Ki_[1] = 0.3; Ki_[2] = 0.0;
+
+  // represent a max velocity due to integrale term
+  Saturation_integral_ = 0.5 ;
 
   count_=0;
 
@@ -121,7 +128,7 @@ void CraneMessageHandler::checkVelocities(double * v, int *s)
 
     }
 
-  if (mocap_status_==0)
+  if (mocap_status_==0 )
     {
       std::cout << "Protect the crane" << std::endl;
       v[0]=0.0;
@@ -182,11 +189,29 @@ void CraneMessageHandler::positionControlStrategy()
       error[i] = desired_position_[i] - sensor_position_[i];
       derivate[i] = (error[i] - previous_error_[i])/ dt;
       integral[i] = integral[i] + error[i]*dt;
+      
+ 
+      if(Ki_[i]!=0.0)
+	{
+	  if(integral[i]*Ki_[i]>Saturation_integral_)
+	    integral[i] = Saturation_integral_/Ki_[i];
+	  if(integral[i]*Ki_[i]<-Saturation_integral_)
+	    integral[i] = -Saturation_integral_/Ki_[i];
+	}
 
       v_[i] = Kp_[i] * error[i] + Kd_[i] * derivate[i] 
 	+ Ki_[i] * integral[i];
 
        previous_error_[i] = error[i];
+
+       double thresh=100;
+     if(    desired_position_[0]>thresh
+	 && desired_position_[1]>thresh
+	 && desired_position_[2]>thresh )
+       {
+	 v_[i]=0.0;
+       }
+
 
      }
 

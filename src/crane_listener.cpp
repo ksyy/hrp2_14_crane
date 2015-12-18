@@ -84,7 +84,7 @@ int main(int argc, char **argv)
   evart_set_of_points 
   /*set_to_follow(std::string("facom-box"),
 		  std::string("facom_box"),
-		  std::string("PO"));*/
+		  std::string("facom_box"));*/
   set_to_follow(std::string("hrp2_head_sf"),
 		std::string("hrp2_head_sf"),
 		std::string("hrp2_head_sf"));
