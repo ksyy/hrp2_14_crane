@@ -52,6 +52,9 @@ protected:
   // PID gains.
   double Kp_[3], Kd_[3], Ki_[3];
 
+  // Saturation threshold
+  double Saturation_integral_;
+
   void joystickStrategy();
   void positionControlStrategy();
   void setHomeAsDesiredPosition();
