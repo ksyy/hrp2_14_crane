@@ -85,9 +85,9 @@ int main(int argc, char **argv)
   /*set_to_follow(std::string("facom-box"),
 		  std::string("facom_box"),
 		  std::string("facom_box"));*/
-  set_to_follow(std::string("hrp2_head_sf"),
-		std::string("hrp2_head_sf"),
-		std::string("hrp2_head_sf"));
+  set_to_follow(std::string("hrp2_14_head"),
+		std::string("hrp2_14_head"),
+		std::string("hrp2_14_head"));
   /*set_to_follow(std::string("helmet"),
 		std::string("helmet"),
 		std::string("helmet"));*/
