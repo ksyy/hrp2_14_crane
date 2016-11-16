@@ -37,12 +37,13 @@ CraneMessageHandler::CraneMessageHandler():
   //Kd_[0] = 1.0; Kd_[1] = 1.0; Kd_[2] = 0.0;
   //Ki_[0] = 0.0; Ki_[1] = 0.0; Ki_[2] = 0.0;
 
+  // index 1 compute a velocity but it is not used
   Kp_[0] = 0.25; Kp_[1] = 1.5; Kp_[2] = 1.5;
   Kd_[0] = 0.0; Kd_[1] = 0.0; Kd_[2] = 0.0;
   Ki_[0] = 0.3; Ki_[1] = 0.3; Ki_[2] = 0.0;
 
   // represent a max velocity due to integrale term
-  Saturation_integral_ = 0.5 ;
+  Saturation_integral_ = 1.5 ;
 
   count_=0;
 
@@ -53,13 +54,13 @@ CraneMessageHandler::CraneMessageHandler():
 void CraneMessageHandler::setHomeAsDesiredPosition()
 {
   desired_position_[0] = 0.935;
-  desired_position_[1] = desired_position_[0]+0.09;  
+  desired_position_[1] = desired_position_[0]+0.09;  // this line is not used
   desired_position_[2] = 0.379;  
 }
 
 #if 0
   desired_position_[0] = 7.154;
-  desired_position_[1] = desired_position_[0]+0.09;  
+  desired_position_[1] = desired_position_[0]+0.09;  // this line is not used
   desired_position_[2] = 3.432; 
 #endif
 
@@ -146,9 +147,9 @@ void CraneMessageHandler::chatterCallback(const sensor_msgs::Joy::ConstPtr& joy)
 
 void CraneMessageHandler::updatePositionCallback(const geometry_msgs::TransformStamped &tf)
 {
-  desired_position_[0] = tf.transform.translation.x+6.91;
-  desired_position_[1] = desired_position_[0]+0.03;
-  desired_position_[2] = tf.transform.translation.y+3.59;
+  desired_position_[0] = tf.transform.translation.x+7.06; // fisrt motor on X ; 7.06 = crane position in x measured at the zero of the motion capture system
+  desired_position_[1] = desired_position_[0]+0.03; // second motor on X ; // this line is not used
+  desired_position_[2] = tf.transform.translation.y+3.63; // motor on y ; 7.06 = crane position in y measured at the zero of the motion capture system
   /*
   desired_position_[0] = 0.935;
   desired_position_[1] = desired_position_[0]+0.09;  
