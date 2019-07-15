@@ -1,9 +1,10 @@
-
 #ifndef _CRANE_MESSAGE_HANDLER_HH_
 #define _CRANE_MESSAGE_HANDLER_HH_
 
+#include <ros/ros.h>
 #include <sensor_msgs/Joy.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <cstdio>
 #include "crane_usb.hh"
 
 enum CraneStrategy {JOYSTICK,POSITION};
@@ -68,8 +69,7 @@ public:
   CraneMessageHandler();
   ~CraneMessageHandler();
   
-  // %Tag(CALLBACK)%
-  void chatterCallback(const sensor_msgs::Joy::ConstPtr& joy);
+  void joystickCallback(const sensor_msgs::Joy::ConstPtr& joy);
   
   void updatePositionCallback(const geometry_msgs::TransformStamped &tf);
 
@@ -84,4 +84,5 @@ public:
   void stopEverything();
 
 };
+
 #endif /* _CRANE_MESSAGE_HANDLER_HH_ */

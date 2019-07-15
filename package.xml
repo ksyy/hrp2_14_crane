@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>hrp2_14_crane</name>
+  <version>1.0.0</version>
+  <description>The hrp2_14_crane package</description>
+  <maintainer email="anicolin@laas.fr">Alexis Nicolin</maintainer>
+  <license>BSD-2</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <exec_depend>message_runtime</exec_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+
+</package>

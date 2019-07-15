@@ -11,8 +11,7 @@ CraneMessageHandler::CraneMessageHandler():
   a_scale_(0.4),
   l_scale_(0.4),
   apply_(false),
-  //strategy_(JOYSTICK)
-  strategy_(POSITION)
+  strategy_(JOYSTICK)
 {
   mocap_status_= 0;
   v_[0] = v_[1] = v_[2] = 0.0;
@@ -25,10 +24,10 @@ CraneMessageHandler::CraneMessageHandler():
   std::cout << "Connection finished" << std::endl;
 
   for(unsigned int i=0;i<3;i++)
-    {
-      previous_error_[i] = 0.0;
-      integral_[i] = 0.0;
-    }
+  {
+    previous_error_[i] = 0.0;
+    integral_[i] = 0.0;
+  }
 
   setHomeAsDesiredPosition();
 
@@ -57,12 +56,6 @@ void CraneMessageHandler::setHomeAsDesiredPosition()
   desired_position_[1] = desired_position_[0]+0.09;  // this line is not used
   desired_position_[2] = 0.379;  
 }
-
-#if 0
-  desired_position_[0] = 7.154;
-  desired_position_[1] = desired_position_[0]+0.09;  // this line is not used
-  desired_position_[2] = 3.432; 
-#endif
 
 CraneMessageHandler::~CraneMessageHandler()
 {
@@ -137,11 +130,11 @@ void CraneMessageHandler::checkVelocities(double * v, int *s)
     }
 }
 
-void CraneMessageHandler::chatterCallback(const sensor_msgs::Joy::ConstPtr& joy)
+void CraneMessageHandler::joystickCallback(const sensor_msgs::Joy::ConstPtr& joy)
 {
-  v_[0] = a_scale_ * joy->axes[0];
-  v_[1] = a_scale_ * joy->axes[1];
-  v_[2] = a_scale_ * joy->axes[2];
+  v_[0] = a_scale_ * joy->axes[1];
+  v_[1] = a_scale_ * joy->axes[0];
+  v_[2] = a_scale_ * joy->axes[4];
   apply_= true;
 }
 
@@ -170,11 +163,14 @@ void CraneMessageHandler::joystickStrategy()
    {
      ROS_INFO("I'll write: %f %f %f", 
 	      v_[0],v_[1],v_[2]);
-     apply_=false;
+     //apply_=false; No new message if the stick is at its maximum, but we should still move
    }
  
  if (ptp_control(v_,s_))
+ {
+   ROS_INFO("Not able to control, retrying...");
    ptp_reconnect_until_ok_or_k_demands(3); 
+ }
 
 }
 
@@ -303,7 +299,6 @@ void CraneMessageHandler::applyControlStrategy()
     sensor_compare_[i] = sensor_position_[i];
   flag_compare = false;
   
-      //std::cout << intervalreading << " Positions:" << sensor_position_[0] << " "<< sensor_position_[1] <<" " << sensor_position_[2] << std::endl;
 }
 
 void CraneMessageHandler::setStrategy(CraneStrategy aStrategy)

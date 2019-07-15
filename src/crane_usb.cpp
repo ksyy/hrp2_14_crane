@@ -12,12 +12,10 @@
 /* --- local data ---------------------------------------------------------- */
 
 static struct ftdi_context *ftdic;
-//static struct MsgStruct CrSensor;
 
 /* --- connect ------------------------------------------------------------- */
 
-int
-ptp_connect(void)
+int ptp_connect(void)
 {
   int s;
 
@@ -45,8 +43,7 @@ ptp_connect(void)
 
 /* --- disconnect ---------------------------------------------------------- */
 
-void
-ptp_disconnect(void)
+void ptp_disconnect(void)
 {
   if (!ftdic) return;
 
@@ -57,7 +54,6 @@ ptp_disconnect(void)
 
 void ptp_reconnect_until_ok_or_k_demands(unsigned int k)
 {
-  // std::cerr << "Disconnect crane" << std::endl; 
   struct timeval begin,end;
   gettimeofday(&begin,0);
 
@@ -82,13 +78,6 @@ void ptp_reconnect_until_ok_or_k_demands(unsigned int k)
   gettimeofday(&end,0);
   std::cerr<< "Time to reconnect:" << end.tv_sec - begin.tv_sec 
     + 0.000001 * (end.tv_usec - begin.tv_usec) << std::endl;
-  /*
-  if (r)
-    std::cerr<< "Could not reconnect crane after " << count << " trials" 
-	     << " limit of trials: " << k << std::endl;
-  else
-    std::cerr<< "Reconnect crane" << std::endl;
-  */
 }
 
 
